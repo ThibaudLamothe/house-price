@@ -4,7 +4,8 @@ TO DO :
 - Create the configuration file for data sotrage
 - Create the script that initiate the storage structure
 - [Structuration] rename `pipeline.py` into `daemon.py` and make a folder with notebooks
-- 
+
+
 NB : after a restructuration all that follow might not be exact. Corrections will come soon.
 ________________
 
