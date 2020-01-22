@@ -1,7 +1,10 @@
 import json
 import pandas as pd
 import numpy as np
-from utils import functions as f
+
+
+################################################################################
+################################################################################
 
 
 def transform_to_numeric(df, col):
@@ -116,12 +119,10 @@ def rename_column(df, col1, col2):
     return df
 
 
-if __name__ == "__main__":
-    FOLDER = 'data/new_tmp_data'
-    lbc_file = '{}/new_lbc.csv'.format(FOLDER)
-    pv_file = '{}/new_pv.csv'.format(FOLDER)
-    sl_file = '{}/new_sl.csv'.format(FOLDER)
+################################################################################
+################################################################################
 
+def clean_lbc(lbc_file):
     df_lbc_annonce = (pd.read_csv(lbc_file)
                       .pipe(transform_string_col_into_dict, 'critere')
                       .pipe(concat_criteres)
@@ -137,40 +138,71 @@ if __name__ == "__main__":
 
     lbc_small = df_lbc_annonce.pipe(select_columns,
                                     ['prix', 'surface', 'prix_m2', 'ville', 'code_postal', 'origine', 'dept', 'id_'])
-    # lbc_small.head()
-    # lbc_small.isnull().sum()
+    return lbc_small
 
-    df_pv = (pd.read_csv(pv_file)
-             .pipe(transform_prix)
-             .pipe(transform_to_numeric, col='nb_pict')
-             .pipe(transform_to_numeric, col='surface')
-             .pipe(calculate_m2)
-             .pipe(get_dept)
-             .pipe(rename_column, 'annonce', 'id_')
-             .assign(origine='pv')
-             )
-    pv_small = df_pv.pipe(select_columns,
-                          ['prix', 'surface', 'prix_m2', 'ville', 'code_postal', 'origine', 'dept', 'id_'])
-    # pv_small.head()
 
+def clean_sl(sl_file):
     df_sl = (pd.read_csv(sl_file)
              .pipe(transform_sl_prix)
              .pipe(transform_sl_surface)
              .pipe(calculate_m2)
              .pipe(fullfill_cp)
              .pipe(get_dept)
-             .pipe(rename_column, 'annonce', 'id_')
+             #  .pipe(rename_column, 'annonce', 'id_')
              .assign(origine='sl')
              )
     sl_small = df_sl.pipe(select_columns,
                           ['prix', 'surface', 'prix_m2', 'ville', 'code_postal', 'origine', 'dept', 'id_'])
-    # sl_small.head()
+    return sl_small
 
-    df_agg = (pd.concat([sl_small, pv_small, lbc_small])
-              .dropna())
+
+def clean_pv(pv_file):
+    df_pv = (pd.read_csv(pv_file)
+             .pipe(transform_prix)
+             .pipe(transform_to_numeric, col='nb_pict')
+             .pipe(transform_to_numeric, col='surface')
+             .pipe(calculate_m2)
+             .pipe(get_dept)
+             #  .pipe(rename_column, 'annonce', 'id_')
+             .assign(origine='pv')
+             )
+    pv_small = df_pv.pipe(select_columns,
+                          ['prix', 'surface', 'prix_m2', 'ville', 'code_postal', 'origine', 'dept', 'id_'])
+    return pv_small
+
+
+################################################################################
+################################################################################
+
+
+if __name__ == "__main__":
+
+    # Configuration information
+    FOLDER = '../../data/new_tmp_data'
+
+    # Create files path
+    lbc_file = '{}/new_LBC.csv'.format(FOLDER)
+    pv_file = '{}/new_PV.csv'.format(FOLDER)
+    sl_file = '{}/new_SL.csv'.format(FOLDER)
+
+    # Select sources
+    SOURCE = ['LBC', 'PV', 'SL']
+    SOURCE = ['LBC', 'PV']
+    df_list = []
+
+    # Prepare dataframes
+    if 'LBC' in SOURCE:
+        df_list.append(clean_lbc(lbc_file))
+    if 'SL' in SOURCE:
+        df_list.append(clean_sl(sl_file))
+    if 'PV' in SOURCE:
+        df_list.append(clean_pv(pv_file))
+
+    # Make aggregation
+    df_agg = (pd.concat(df_list).dropna())
     df_agg.head()
 
-    FOLDER = 'data/new_tmp_data'
+    # Save new data 
     TITLE = 'new_clean_data.csv'
     path = '{}/{}'.format(FOLDER, TITLE)
     df_agg.to_csv(path, header=True, index=False)
