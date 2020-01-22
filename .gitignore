@@ -8,7 +8,7 @@ __pycache__
 
 # Data related files
 data/
-old_scripts/
+src/old_scripts/
 log/
 fig/
 *.jl

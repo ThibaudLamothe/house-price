@@ -1,0 +1,22 @@
+# data manipulation
+numpy
+scipy
+pandas
+
+# data viz
+seaborn
+matplotlib
+
+# ml
+scikit-learn
+
+# for convenience
+jupyter
+autopep8
+jupyterlab
+jupyter_contrib_nbextensions
+jupyter_nbextensions_configurator
+
+# Other pluggins
+slacker # Slack connection
+scrapy
