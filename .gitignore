@@ -1,16 +1,15 @@
 # Automatic files
+.idea
 .DS_Store
 .ipynb_checkpoints
 *.ipynb_checkpoints
 *.vscode
-__pycache__
 *__pycache__
+__pycache__
 
 # Data related files
 data/
 src/old_scripts/
-log/
-fig/
 *.jl
 *.json
 *.token

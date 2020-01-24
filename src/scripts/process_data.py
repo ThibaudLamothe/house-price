@@ -1,10 +1,7 @@
-import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-
 
 if __name__ == "__main__":
-    FOLDER = 'data/new_tmp_data'
+    FOLDER = '../../data/new_tmp_data'
     TITLE = 'new_clean_data.csv'
     path = '{}/{}'.format(FOLDER, TITLE)
     df = pd.read_csv(path)
@@ -22,7 +19,7 @@ if __name__ == "__main__":
         print('Nombre d\'appartement en viager au total', df_viager.shape[0])
         print('Nombre d\'appartement en viager nouveau', df_viager_new.shape[0])
 
-    FOLDER = 'data/new_tmp_data'
+
     TITLE = 'new_process_data.csv'
     path = '{}/{}'.format(FOLDER, TITLE)
     df.to_csv(path, header=True, index=False)

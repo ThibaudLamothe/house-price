@@ -1,11 +1,7 @@
 import os
 import json
 import datetime
-import numpy as np
 import pandas as pd
-
-from utils import functions as f
-#pd.options.mode.chained_assignment = None
 
 from slacker import Slacker
 import credentials as c

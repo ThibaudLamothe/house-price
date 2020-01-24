@@ -2,22 +2,29 @@ import os
 import json
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-from utils import functions as f
+import functions as f
+
+
+############################################################################
+############################################################################
+DATA_PATH = '../../data/'
+
 
 def load_new():
-    path = 'data/new_tmp_data/new_process_data.csv'
+    path = DATA_PATH + 'new_tmp_data/new_process_data.csv'
     if os.path.isfile(path):
         return pd.read_csv(path)
     print('No new processed data at : \n{}'.format(path))
     return pd.DataFrame()
 
+
 def load_old():
-    path = 'data/processed_data/process_data.csv'
+    path = DATA_PATH + 'processed_data/process_data.csv'
     if os.path.isfile(path):
         return pd.read_csv(path)
     print('No old processed data at : \n{}'.format(path))
     return pd.DataFrame()
+
 
 def load_dvf():
     return None
@@ -28,20 +35,26 @@ def save_alert(message, channel="test_channel"):
              "message": message,
              "emoji": ":female-firefighter:"}
 
-    folder = 'data/alert_files/'
+    folder = DATA_PATH + 'alert_files/'
     now = f.get_now()
     path = '{}/alert_{}.json'.format(folder, now)
     with open(path, 'w') as outfile:
         json.dump(alert, outfile)
 
+
 def save_process_data_history():
     return None
+
 
 def concat_process_with_previous(new=2):
     return new
 
+
 def save_ids():
     return None
+
+############################################################################
+############################################################################
 
 if __name__ == "__main__":
 
@@ -53,6 +66,7 @@ if __name__ == "__main__":
     df_new = load_new()
     df_old = load_old()
     df_dvf = load_dvf()
+
     print('NEW : ', df_new.shape)
     print('OLD : ', df_old.shape)
 
@@ -81,8 +95,12 @@ if __name__ == "__main__":
         print('Ville new : {}'.format(ville_new))
 
     # Calculating information
+    df_old['prix'] = np.float(df_old['prix'])
+    df_old['surface'] = np.float(df_old['surface'])
+    df_old['prix_m2'] = np.float(df_old['prix_m2'])
     old_mean = df_old.groupby('ville').mean()[['prix', 'surface', 'prix_m2']].applymap(lambda x: np.round(x, 2))
-    old_d1 = df_old.groupby('ville').quantile(q=0.1)[['prix', 'surface', 'prix_m2']].applymap(lambda x: np.round(x, 2))
+    # old_d1 = df_old.groupby('ville').quantile(q=0.1)[['prix', 'surface', 'prix_m2']].applymap(lambda x: np.round(x, 2))
+    old_d1 = df_old.groupby('ville').median()[['prix', 'surface', 'prix_m2']].applymap(lambda x: np.round(x, 2))
 
     # Computing columuns for comparison
     df_new['moy_ville'] = df_new['ville'].apply(lambda x: old_mean.loc[x, 'prix_m2'] if x in ville_inter else -1)

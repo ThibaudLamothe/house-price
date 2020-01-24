@@ -1,3 +1,5 @@
+import os
+
 class ImmoScrap:
     def __init__(self, config_path):
         self.config_path = self.parse_config(config_path)
@@ -34,4 +36,10 @@ class ImmoScrap:
 
 
 if __name__ == "__main__":
-    immo = ImmoScrap('config.json')
+    # immo = ImmoScrap('config.json')
+    os.system('python realize_scraping.py')
+    os.system('python clean_and_concatenate.py')
+    os.system('python process_data.py')
+    os.system('python make_analysis_of_new.py')
+    # os.system('python alerting.py')
+
