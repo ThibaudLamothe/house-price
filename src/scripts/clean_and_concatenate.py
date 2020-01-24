@@ -178,7 +178,7 @@ def clean_pv(pv_file):
 if __name__ == "__main__":
 
     # Configuration information
-    FOLDER = '../../data/new_tmp_data'
+    FOLDER = '../../data/tmp'
 
     # Create files path
     lbc_file = '{}/new_LBC.csv'.format(FOLDER)

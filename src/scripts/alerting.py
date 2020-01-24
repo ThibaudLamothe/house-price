@@ -13,11 +13,11 @@ def create_slack():
 
 def save_ts_analyse():
     ts = str(datetime.datetime.now())[:19]
-    with open('data/last_analyse.txt', 'w') as f:
+    with open('data/time/last_analyse.txt', 'w') as f:
         f.write(ts)
 
 def load_ts_analyse():
-    with open('data/last_analyse.txt', 'r') as f:
+    with open('data/time/last_analyse.txt', 'r') as f:
         ts = f.read()
     ts = pd.to_datetime(ts)
     return ts
@@ -31,7 +31,7 @@ def parse_alert(alert):
 def get_new_alert_files():
     last_analyse = str(load_ts_analyse())[:19].replace(' ', '_').replace(':', '-')
 
-    path = 'data/alert_files/'
+    path = 'data/alerts/'
     list_alerts = os.listdir(path)
     date_alerts = [i[6:-5] for i in list_alerts if 'alert' in i]
 

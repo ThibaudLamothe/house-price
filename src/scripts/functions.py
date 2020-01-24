@@ -3,6 +3,7 @@ import pandas as pd
 import datetime
 
 DATA_PATH = '../../data/'
+DATA_PATH_TIME = '../../data/time/'
 
 
 def read_jl_file(file_name):
@@ -20,7 +21,7 @@ def read_jl_file(file_name):
 
 def save_ts_analyse():
     ts = str(datetime.datetime.now())[:19]
-    path = DATA_PATH + 'last_analyse.txt'
+    path = DATA_PATH_TIME + 'last_analyse.txt'
     with open(path, 'w') as file:
         file.write(ts)
 
@@ -28,7 +29,7 @@ def save_ts_analyse():
 def load_ts_analyse():
     # TODO : que se passe t il si le fichier n'existe pas ?
     # TODO : Penser peut etre à en mettre un par défaut au moment de la création de la structure du folder.
-    path = DATA_PATH + 'last_analyse.txt'
+    path = DATA_PATH_TIME + 'last_analyse.txt'
     with open(path, 'r') as file:
         ts = file.read()
     ts = pd.to_datetime(ts)
@@ -36,13 +37,13 @@ def load_ts_analyse():
 
 def save_ts_alert():
     ts = str(datetime.datetime.now())[:19]
-    path = DATA_PATH + 'last_alert.txt'
+    path = DATA_PATH_TIME + 'last_alert.txt'
     with open(path, 'w') as file:
         file.write(ts)
 
 
 def load_ts_alert():
-    path = DATA_PATH + 'last_alert.txt'
+    path = DATA_PATH_TIME + 'last_alert.txt'
     with open(path, 'r') as file:
         ts = file.read()
     ts = pd.to_datetime(ts)

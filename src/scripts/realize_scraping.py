@@ -117,16 +117,16 @@ def manage(project_name, spider_name, scraping_corner_folder, local_data_folder,
     # Compute folder variables
     scraping_project_folder = scraping_corner_folder + 'scrapy_project/'
     scraping_data_folder = scraping_corner_folder + 'scrapped_data/immo_scrap/'
-    tmp_folder = local_data_folder + 'new_tmp_data/'
+    tmp_folder = local_data_folder + 'tmp/'
 
     # Compute filenames
     scrapped_filename = '{}_immo.jl'.format(project_name)
     saving_filename = 'new_{}.csv'.format(project_name)
 
     # Compute path
-    processed_path = local_data_folder + 'processed_data/processed_data.csv'
-    dest_history_path = local_data_folder + 'raw_data/history/{}_{}.jl'.format(project_name, now)
-    dest_pipeline_path = local_data_folder + 'raw_data/raw_{}.jl'.format(project_name)
+    processed_path = local_data_folder + 'processed/processed_data.csv'
+    dest_history_path = local_data_folder + 'raw/history/{}_{}.jl'.format(project_name, now)
+    dest_pipeline_path = local_data_folder + 'raw/raw_{}.jl'.format(project_name)
     tmp_path = tmp_folder + '{}'.format(saving_filename)
     source_path = scraping_data_folder + '{}'.format(scrapped_filename)
 

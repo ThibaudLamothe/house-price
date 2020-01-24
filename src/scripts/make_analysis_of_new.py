@@ -11,7 +11,7 @@ DATA_PATH = '../../data/'
 
 
 def load_new():
-    path = DATA_PATH + 'new_tmp_data/new_process_data.csv'
+    path = DATA_PATH + 'tmp/new_process_data.csv'
     if os.path.isfile(path):
         return pd.read_csv(path)
     print('No new processed data at : \n{}'.format(path))
@@ -19,7 +19,7 @@ def load_new():
 
 
 def load_old():
-    path = DATA_PATH + 'processed_data/process_data.csv'
+    path = DATA_PATH + 'processed/process_data.csv'
     if os.path.isfile(path):
         return pd.read_csv(path)
     print('No old processed data at : \n{}'.format(path))

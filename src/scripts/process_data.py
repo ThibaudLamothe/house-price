@@ -1,7 +1,7 @@
 import pandas as pd
 
 if __name__ == "__main__":
-    FOLDER = '../../data/new_tmp_data'
+    FOLDER = '../../data/tmp'
     TITLE = 'new_clean_data.csv'
     path = '{}/{}'.format(FOLDER, TITLE)
     df = pd.read_csv(path)
