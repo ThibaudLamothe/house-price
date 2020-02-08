@@ -36,7 +36,14 @@ class ImmoScrap:
 
 
 if __name__ == "__main__":
+
     # immo = ImmoScrap('config.json')
+
+    # Restart structure
+    os.system('cd ../../ && rm -rf data')
+    os.system('cd ../utils && python create_structure.py')
+
+    # Execute pipeline
     os.system('python realize_scraping.py')
     os.system('python clean_and_concatenate.py')
     os.system('python process_data.py')

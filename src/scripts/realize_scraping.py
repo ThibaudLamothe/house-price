@@ -25,14 +25,31 @@ def get_ids(spider_name):
 ################################################################################
 ################################################################################
 
+def clean_tmp_folder(tmp_folder):
+    print(' > TMP FOLDER', tmp_folder)
+
+    is_tmp = os.path.exists(tmp_folder)
+    if not is_tmp:
+        os.mkdir(tmp_folder)
+
+    file_list = os.listdir(tmp_folder)
+    for file in file_list:
+        print('> DELETE : {}'.format(file))
+        path = tmp_folder + file
+        os.remove(path)
+    print('> TMP is clean')
+
+
 def run_spider(spider_name, project_name, scraping_project_path, scrapy_data_path, file_name):
     """ Execute spider from scraping repository with all scrapping content
-    - scraping_corner_path :
-    - scrapy_data_path :
-    - spider_name :
-    - project_name :
+    - spider_name:
+    - project_name:
+    - scraping_project_path:
+    - scrapy_data_path:
+    - file_name:
     """
     print('RunSpider')
+
     # Prepare command to execute spider
     cmd0 = 'export SCRAPY_PROJECT={}'.format(project_name)
     cmd1 = 'cd "{}"'.format(scraping_project_path)
@@ -60,6 +77,7 @@ def get_immo_data(path_source, path_dest_history, path_dest_pipeline, project_na
     - now:
     """
     print('GetImmo')
+
     # Save data for history
     copyfile(path_source, path_dest_history)
 
@@ -72,26 +90,32 @@ def get_immo_data(path_source, path_dest_history, path_dest_pipeline, project_na
     print('> Files from {} saved.'.format(project_name))
 
 
-def process_data(scrapped_path, processed_path, title):
+def get_only_new(scrapped_path, processed_path, title):
     """Read the data into the folder and prepare for saving
     - scrapped_path:
     - porcessed_path:
     - title:
     """
     print('ProcessData')
+
     # Read data
     df = f.read_jl_file(scrapped_path)
     new_ids = df['id_'].values
 
-    # Check if new
+    # Check if there are already processed data
     is_processed = os.path.isfile(processed_path)
 
-    # If new
+    # If there are
     if is_processed:
         print('> is_processed')
+
         # Get old ids
         old_ids = get_ids(title)  # functions to write
+
+        # Get new ids
         new_ids = [id_ for id_ in new_ids if id_ not in old_ids]
+
+        # Keep only new IDs
         df = filter_ids(df, 'id_', new_ids)
 
     return df
@@ -104,6 +128,7 @@ def save_data(df, tmp_file_path, project_name):
     - saving_name:
     - title:
     """
+
     print('> Selection ok.')
     df.to_csv(tmp_file_path, header=True, index=False)
     print('> New data {} saved.'.format(project_name))
@@ -114,6 +139,15 @@ def save_data(df, tmp_file_path, project_name):
 
 
 def manage(project_name, spider_name, scraping_corner_folder, local_data_folder, scrapping=True, now=f.get_now()):
+    """ Make data available from scrapping to raw data fodler
+    - project_name:
+    - spider_name:
+    - scraping_corner_folder:
+    - local_data_folder:
+    - scrapping:
+    - now:
+    """
+
     # Compute folder variables
     scraping_project_folder = scraping_corner_folder + 'scrapy_project/'
     scraping_data_folder = scraping_corner_folder + 'scrapped_data/immo_scrap/'
@@ -145,7 +179,7 @@ def manage(project_name, spider_name, scraping_corner_folder, local_data_folder,
                   project_name=project_name)
 
     # Process data fr
-    df = process_data(scrapped_path=dest_pipeline_path,
+    df = get_only_new(scrapped_path=dest_pipeline_path,
                       processed_path=processed_path,
                       title=project_name)
     # Save data
@@ -159,12 +193,20 @@ def manage(project_name, spider_name, scraping_corner_folder, local_data_folder,
 
 if __name__ == "__main__":
 
-    # Define import paths
-    local_data_folder = '../../data/'
-    scraping_corner_folder = '/Users/thibaud/Documents/Python_scripts/02_Projects/scraping_corner/'
+    # Load config file
+    config = f.read_json(f.CONFIG_PATH)
+
+    # Extract necessary information from config
+    local_data_folder = config['general']['data_path']
+    scraping_corner_folder = config['general']['scraping_corner_path']
+    scraping_list = config['general']['scraping_list']
+    tmp_folder = config['general']['tmp_folder_path']
+
+    # Delete tmp data
+    clean_tmp_folder(tmp_folder)
 
     # Realize scrapings
-    for project in ['LBC', 'PV']:  # 'SL'
+    for project in scraping_list:
         manage(project_name=project,
                spider_name='spider{}'.format(project),
                scraping_corner_folder=scraping_corner_folder,

@@ -1,13 +1,12 @@
 import os
-import json
 import datetime
 import pandas as pd
-
 from slacker import Slacker
-import credentials as c
 
-def create_slack():
-    slack_api_token = c.slack_api_token
+import functions as f
+
+
+def create_slack(slack_api_token):
     slack = Slacker(slack_api_token)
     return slack
 
@@ -41,30 +40,40 @@ def get_new_alert_files():
 
 
 if __name__ == "__main__":
-    slack = create_slack()
 
-    if False:
-        msg_return = slack.chat.post_message(channel='test_channel',
-                                             text='Test blablabla',
+    # Read config file
+    config = f.read_json(f.CONFIG_PATH)
+
+    # Extract slack token from config
+    token = config['general']['slack_token']
+
+    # Create slack instance
+    slack = create_slack(token)
+
+    if True:
+        msg = "Bonjour Yann LeCun"
+        msg_return = slack.chat.post_message(channel='immo_scrap',
+                                             text=msg,
                                              username='Alert',
                                              icon_emoji=':female-firefighter:')
 
-    path = 'data/alert_files/'
-    for file in get_new_alert_files():
-        print('> Dealing with file : {}'.format(file))
-        with open(path + file) as json_file:
-            alert = json.load(json_file)
-        message, channel, emoji = parse_alert(alert)
-        print(channel, emoji, len(message))
-
-        msg_return = slack.chat.post_message(channel=channel,
-                                             text=message,
-                                             username='Alert',
-                                             icon_emoji=emoji)
-
-        # Savin execution date for next analysis
-        if msg_return.successful:
-            print('> Everything OK : message sent to slack')
-            save_ts_analyse()
-        else:
-            print('> An error occured while sending slack message')
+    # path = 'data/alerts/'
+    #
+    # for file in get_new_alert_files():
+    #     print('> Dealing with file : {}'.format(file))
+    #     with open(path + file) as json_file:
+    #         alert = json.load(json_file)
+    #     message, channel, emoji = parse_alert(alert)
+    #     print(channel, emoji, len(message))
+    #
+    #     msg_return = slack.chat.post_message(channel=channel,
+    #                                          text=message,
+    #                                          username='Alert',
+    #                                          icon_emoji=emoji)
+    #
+    #     # Savin execution date for next analysis
+    #     if msg_return.successful:
+    #         print('> Everything OK : message sent to slack')
+    #         save_ts_analyse()
+    #     else:
+    #         print('> An error occured while sending slack message')

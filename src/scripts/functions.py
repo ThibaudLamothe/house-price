@@ -4,6 +4,13 @@ import datetime
 
 DATA_PATH = '../../data/'
 DATA_PATH_TIME = '../../data/time/'
+CONFIG_PATH = '../config/config.json'
+
+
+def read_json(json_path):
+    with open(json_path) as json_file:
+        data = json.load(json_file)
+    return data
 
 
 def read_jl_file(file_name):
