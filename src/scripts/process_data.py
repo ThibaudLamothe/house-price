@@ -1,49 +1,90 @@
+# Python libraries
+import os
 import pandas as pd
+
+# Personal functions
 import functions as f
+
+################################################################################
+################################################################################
+
 
 def paris_decompo(df):
     df['ville'] = df[['ville', 'code_postal']].apply(paris_decompo, axis=1)
     return df
 
 
-def viager(df, last_analyse):
+def viager(df):
     # Dealing with viager
     df['viager'] = df['contenu'].apply(lambda x: True if 'viager' in x else False)
-    df_viager = df[df['viager']]
-    df_viager_new = df_viager[df_viager.index > last_analyse]
-    print('Nombre d\'appartement en viager au total', df_viager.shape[0])
-    print('Nombre d\'appartement en viager nouveau', df_viager_new.shape[0])
+
+    # Display result
+    nb_viager = df['viager'].sum()
+    print('Nombre d\'appartement en viager', nb_viager)
+
     return df
+
+
+################################################################################
+################################################################################
+
+
+def processing(df):
+    # return (df.pipe(paris_decompo)
+    #         .pipe(viager)
+    #         )
+    return df
+
+def add_to_already_processed(df, path):
+    print(df.head())
+
+
+    if os.path.exists(path):
+        df_old = pd.read_csv(path)
+        print(df_old.head())
+        df_old['new'] = 0
+        df['new'] = 1
+
+
+        df_old = pd.concat([df, df_old], sort=False)
+        print(df_old.head())
+        df_old.to_csv(path)
+    else:
+        df['new'] = 1
+        df.to_csv(path, header=True, index=False)
 
 
 if __name__ == "__main__":
 
-    # Configuration
-    FOLDER_TMP = '../../data/tmp'
-    TITLE_READ_TMP = 'new_clean_data.csv'
-    TITLE_SAVE_TMP = 'new_process_data.csv'
-
-    FOLDER_HISTORY = '../../data/processed/history'
-
+    # Load config file
+    config = f.read_json(f.CONFIG_PATH)
     now = f.get_now()
-    TITLE_SAVE_HISTORY = 'process_data_{}.csv'.format(now)
 
+    # Configuration
+    FOLDER_TMP = config['general']['tmp_folder_path']
+    FOLDER_HISTORY = config['processing']['folder_history']
+    FOLDER_PROCESSED = config['processing']['processed_folder_path']
+    TITLE_READ_TMP = config['processing']['clean_data_filename']
+    TITLE_SAVE_TMP = config['processing']['process_data_filename']
+    TITLE_SAVE_HISTORY = config['processing']['history_process_filename']
+    TITLE_PROCESSED = config['processing']['processed_all_data_filename']
 
     # Loading
-    path = '{}/{}'.format(FOLDER_TMP, TITLE_READ_TMP)
+    path = FOLDER_TMP + TITLE_READ_TMP
     df = pd.read_csv(path)
 
     # Processing
-    processing = False
-    if processing:
-        df = (df.pipe(paris_decompo)
-              .pipe(viager)
-              )
+    process = False
+    if process: df = df.pipe(processing)
 
     # Saving results into tmp
-    path = '{}/{}'.format(FOLDER_TMP, TITLE_SAVE_TMP)
+    path = FOLDER_TMP + TITLE_SAVE_TMP
     df.to_csv(path, header=True, index=False)
 
     # Saving results into history
-    path = '{}/{}'.format(FOLDER_HISTORY, TITLE_SAVE_HISTORY)
+    path = FOLDER_HISTORY + TITLE_SAVE_HISTORY.format(now)
     df.to_csv(path, header=True, index=False)
+
+    # Add to processed data
+    path = FOLDER_PROCESSED + TITLE_PROCESSED
+    df.pipe(add_to_already_processed, path)

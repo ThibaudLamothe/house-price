@@ -1,52 +1,12 @@
-import os
+# Python libraries
 import json
 import numpy as np
-import pandas as pd
+
+# Personal functions
 import functions as f
 
 ############################################################################
 ############################################################################
-DATA_PATH = '../../data/'
-
-
-
-def load_new(new_data_path):
-    if os.path.isfile(new_data_path):
-        df_new = pd.read_csv(new_data_path)
-        print('NEW : ', df_new.shape)
-        return df_new
-    print('No new processed data at : \n{}'.format(new_data_path))
-    return pd.DataFrame()
-
-
-def load_old(old_data_path):
-    if os.path.isfile(old_data_path):
-        df_old = pd.read_csv(old_data_path)
-        print('OLD : ', df_old.shape)
-        return df_old
-    print('No old processed data at : \n{}'.format(old_data_path))
-    return pd.DataFrame()
-
-
-def save_alert(message, channel="test_channel"):
-    alert = {"channel": channel,
-             "message": message,
-             "emoji": ":female-firefighter:"}
-
-    folder = DATA_PATH + 'alerts'
-    now = f.get_now()
-    path = '{}/alert_{}.json'.format(folder, now)
-    with open(path, 'w') as outfile:
-        json.dump(alert, outfile)
-
-
-def fake_old_new(df_new):
-    half = np.int(df_new.shape[0] / 2)
-    print(half)
-    df_old = df_new.iloc[:half]
-    df_new = df_new.iloc[half:]
-    return df_old, df_new
-
 
 def delete_viager(df):
     df = df[df['viager'] == False]
@@ -103,13 +63,17 @@ def get_important_new_lines(df_old, df_new, repartition):
     return df_inf_d1
 
 
-def prepare_alerts(df_inf_d1):
+################################################################################
+################################################################################
+
+
+def prepare_alerts(df):
     message = ''
-    for key, value in df_inf_d1['ville'].value_counts().sort_index().to_dict().items():
+    for key, value in df['ville'].value_counts().sort_index().to_dict().items():
         message += '*{}*:{} annonces décile 1.\n'.format(key, value)
 
     default_url = 'www.google.fr'
-    for i in df_inf_d1.sort_values(by='ville').iterrows():
+    for i in df.sort_values(by='ville').iterrows():
         line = i[1]
         ville = line['ville']
         # url = line['url']
@@ -125,16 +89,54 @@ def prepare_alerts(df_inf_d1):
     return message
 
 
-def save_process_data_history():
-    return None
+def save_alert(message, alert_path, channel="immo_scrap"):
+
+    # Create the alert object for slack library
+    alert = {"channel": channel,
+             "message": message,
+             "emoji": ":female-firefighter:"}
+
+    # Save it in the alerts folder
+    path = alert_path + 'alert_{}.json'.format(f.get_now())
+    with open(path, 'w') as outfile:
+        json.dump(alert, outfile)
 
 
-def concat_process_with_previous(new=2):
-    return new
+############################################################################
+############################################################################
 
+def manage_alerts(processed_path, criteres, alert_path, channel, real=True):
 
-def save_ids():
-    return None
+    # Loading different data sources
+    df = f.load_csv(processed_path)
+
+    # Make separation of the dataset into old and new to conduct analyses
+    if real:
+        df_new = df[df['new'] == 1]
+        df_old = df[df['new'] == 0]
+    else:
+        df_old, df_new = f.fake_old_new(df)
+
+    # Get city repartition
+    repartition = get_ville_repartition(df_old, df_new)
+
+    # Parsing request
+    for critere_name, critere_description in criteres.items():
+        print(' > Critere :', critere_name)
+
+        # Creating an alert dataFrame given request configuration file
+        df_alert = get_important_new_lines(df_old, df_new, repartition)
+
+        # Transform the dataFrame into a message for Slack
+        alert = prepare_alerts(df_alert)
+
+        #
+        if len(alert)==0:
+            print('Pas d\'alerte à annoncer')
+
+            # TODO : remove that line and add the save_alert in an else statement
+            alert ='Ceci est la traduction d\'une alerte vide'
+        save_alert(alert, alert_path, channel)
 
 
 ############################################################################
@@ -142,38 +144,21 @@ def save_ids():
 
 if __name__ == "__main__":
 
-    #
-    new_data_path = DATA_PATH + 'tmp/new_process_data.csv'
-    old_data_path = DATA_PATH + 'tmp/process_data.csv'
+    # Load config file
+    config = f.read_json(f.CONFIG_PATH)
+    now = f.get_now()
 
-    # Loading information of when last analyse was realized
-    last_analyse = f.load_ts_analyse()  # pd.Timestamp('20190425')
-    print('Last analyse realised at {}'.format(last_analyse))
+    # Configuration
+    FOLDER_PROCESSED = config['processing']['processed_folder_path']
+    TITLE_PROCESSED = config['processing']['processed_all_data_filename']
+    CRITERE_PATH = config['general']['critere_path']
+    ALERT_PATH = config['general']['alert_data_path']
+    SLACK_CHANNEL = config['alerting']['channel']
 
-    # Loading different data sources
-    df_new = load_new(new_data_path)
-    df_old = load_old()
+    # Loading content
+    criteres = f.read_json(CRITERE_PATH)
 
-    # Fake old new
-    df_old, df_new = fake_old_new(df_new)
+    # Create alerts
+    processed_path = FOLDER_PROCESSED + TITLE_PROCESSED
+    manage_alerts(processed_path, criteres, ALERT_PATH, SLACK_CHANNEL, real=True)
 
-    # Get city repartition
-    repartition = get_ville_repartition(df_old, df_new)
-
-    # Get new lines with interest
-    df_inf_d1 = get_important_new_lines(df_old, df_new, repartition)
-
-    # If no new lines : nothing happens
-    if len(df_inf_d1) == 0:
-        print('> No new line : nothing to update.')
-
-    # If new lines
-    else:
-        # Computing the message for slack
-        message = prepare_alerts(df_inf_d1)
-
-        # Saving results
-        save_alert(message)
-        save_process_data_history()
-        concat_process_with_previous()
-        save_ids()

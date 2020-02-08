@@ -185,23 +185,23 @@ if __name__ == "__main__":
     config = f.read_json(f.CONFIG_PATH)
 
     # Configuration information
-    FOLDER = config['general']['tmp_folder_path']
-    SOURCE = config['general']['scraping_list']
-    TITLE = config['processing']['clean_data_filename']
+    SOURCES = config['general']['scraping_list']
+    FOLDER_TMP = config['general']['tmp_folder_path']
+    TITLE_CLEAN_TMP = config['processing']['clean_data_filename']
 
     # list for new references dataFrames
     df_list = []
 
     # Appending each datasource
-    for source in SOURCE:
-        clean_csv_name = FOLDER + 'new_{}.csv'.format(source)
+    for source in SOURCES:
+        clean_csv_name = FOLDER_TMP + 'new_{}.csv'.format(source)
         clean_function = clean_lbc if source == 'LBC' else clean_pv if source == 'PV' else clean_sl
         df_clean = clean_function(clean_csv_name)
         df_list.append(df_clean)
 
     # Make aggregation
-    df_agg = (pd.concat(df_list).dropna())
+    df_agg = pd.concat(df_list).dropna()
 
     # Save new data
-    path = '{}/{}'.format(FOLDER, TITLE)
+    path = FOLDER_TMP + TITLE_CLEAN_TMP
     df_agg.to_csv(path, header=True, index=False)

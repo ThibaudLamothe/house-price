@@ -1,7 +1,9 @@
+# Python libraries
 import os
-import functions as f
 from shutil import copyfile
 
+# Personal functions
+import functions as f
 
 ################################################################################
 ################################################################################
@@ -26,18 +28,23 @@ def get_ids(spider_name):
 ################################################################################
 
 def clean_tmp_folder(tmp_folder):
-    print(' > TMP FOLDER', tmp_folder)
+    """ Delete files from the tmp folder as we're starting a new pipeline
+    """
 
+    # Check if tmp exists
     is_tmp = os.path.exists(tmp_folder)
+
+    # If does not exist, create them
     if not is_tmp:
         os.mkdir(tmp_folder)
 
+    # Get the list of files into tmp folder
     file_list = os.listdir(tmp_folder)
+
+    # If any, we delete them all
     for file in file_list:
-        print('> DELETE : {}'.format(file))
         path = tmp_folder + file
         os.remove(path)
-    print('> TMP is clean')
 
 
 def run_spider(spider_name, project_name, scraping_project_path, scrapy_data_path, file_name):
@@ -159,7 +166,7 @@ def manage(project_name, spider_name, scraping_corner_folder, local_data_folder,
 
     # Compute path
     processed_path = local_data_folder + 'processed/processed_data.csv'
-    dest_history_path = local_data_folder + 'raw/history/{}_{}.jl'.format(project_name, now)
+    dest_history_path = local_data_folder + 'raw/history/raw_{}_{}.jl'.format(project_name, now)
     dest_pipeline_path = local_data_folder + 'raw/raw_{}.jl'.format(project_name)
     tmp_path = tmp_folder + '{}'.format(saving_filename)
     source_path = scraping_data_folder + '{}'.format(scrapped_filename)
@@ -197,17 +204,18 @@ if __name__ == "__main__":
     config = f.read_json(f.CONFIG_PATH)
 
     # Extract necessary information from config
-    local_data_folder = config['general']['data_path']
-    scraping_corner_folder = config['general']['scraping_corner_path']
-    scraping_list = config['general']['scraping_list']
-    tmp_folder = config['general']['tmp_folder_path']
+    SOURCES = config['general']['scraping_list']
+    FOLDER_LOCAL_DATA = config['general']['data_path']
+    FOLDER_SCRAPING_CORNER = config['general']['scraping_corner_path']
+    FOLDER_TMP = config['general']['tmp_folder_path']
 
     # Delete tmp data
-    clean_tmp_folder(tmp_folder)
+    clean_tmp_folder(FOLDER_TMP)
 
     # Realize scrapings
-    for project in scraping_list:
+    for project in SOURCES:
         manage(project_name=project,
                spider_name='spider{}'.format(project),
-               scraping_corner_folder=scraping_corner_folder,
-               local_data_folder=local_data_folder)
+               scraping_corner_folder=FOLDER_SCRAPING_CORNER,
+               local_data_folder=FOLDER_LOCAL_DATA
+               )
