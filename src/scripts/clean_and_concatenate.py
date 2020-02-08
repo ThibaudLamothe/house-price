@@ -1,6 +1,10 @@
+# Python libraries
 import json
-import pandas as pd
 import numpy as np
+import pandas as pd
+
+# Personal functions
+import functions as f
 
 
 ################################################################################
@@ -177,32 +181,27 @@ def clean_pv(pv_file):
 
 if __name__ == "__main__":
 
+    # Load config file
+    config = f.read_json(f.CONFIG_PATH)
+
     # Configuration information
-    FOLDER = '../../data/tmp'
+    FOLDER = config['general']['tmp_folder_path']
+    SOURCE = config['general']['scraping_list']
+    TITLE = config['processing']['clean_data_filename']
 
-    # Create files path
-    lbc_file = '{}/new_LBC.csv'.format(FOLDER)
-    pv_file = '{}/new_PV.csv'.format(FOLDER)
-    sl_file = '{}/new_SL.csv'.format(FOLDER)
-
-    # Select sources
-    SOURCE = ['LBC', 'PV', 'SL']
-    SOURCE = ['LBC', 'PV']
+    # list for new references dataFrames
     df_list = []
 
-    # Prepare dataframes
-    if 'LBC' in SOURCE:
-        df_list.append(clean_lbc(lbc_file))
-    if 'SL' in SOURCE:
-        df_list.append(clean_sl(sl_file))
-    if 'PV' in SOURCE:
-        df_list.append(clean_pv(pv_file))
+    # Appending each datasource
+    for source in SOURCE:
+        clean_csv_name = FOLDER + 'new_{}.csv'.format(source)
+        clean_function = clean_lbc if source == 'LBC' else clean_pv if source == 'PV' else clean_sl
+        df_clean = clean_function(clean_csv_name)
+        df_list.append(df_clean)
 
     # Make aggregation
     df_agg = (pd.concat(df_list).dropna())
-    df_agg.head()
 
-    # Save new data 
-    TITLE = 'new_clean_data.csv'
+    # Save new data
     path = '{}/{}'.format(FOLDER, TITLE)
     df_agg.to_csv(path, header=True, index=False)
