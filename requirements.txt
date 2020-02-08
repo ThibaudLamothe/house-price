@@ -4,19 +4,21 @@ scipy
 pandas
 
 # data viz
-seaborn
 matplotlib
+seaborn
 
 # ml
 scikit-learn
+gensim
+nltk
 
 # for convenience
+logzero
 jupyter
-autopep8
 jupyterlab
-jupyter_contrib_nbextensions
-jupyter_nbextensions_configurator
 
 # Other pluggins
-slacker # Slack connection
 scrapy
+requests
+wordcloud
+stop_words
