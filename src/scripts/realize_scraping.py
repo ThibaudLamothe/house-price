@@ -109,13 +109,6 @@ def keep_only_new(scrapped_path, processed_path, project_name, db):
     old_ids = db.get_ids(table_name=table_name)
     old_ids = set(old_ids)
 
-    # # Check if there are already processed data
-    # is_processed = os.path.isfile(processed_path)
-
-    # # If there are
-    # if is_processed:
-    #     print('> is_processed')
-
     # Get new ids
     new_ids = [id_ for id_ in new_ids if id_ not in old_ids]
 
@@ -123,19 +116,6 @@ def keep_only_new(scrapped_path, processed_path, project_name, db):
     df = filter_ids(df, 'id_', new_ids)
 
     return df
-
-
-# def save_data_csv(df, tmp_file_path, project_name):
-#     """ Saving data into local folder
-#     - df:
-#     - tmp_folder:
-#     - saving_name:
-#     - title:
-#     """
-
-#     print('> Selection ok.')
-#     df.to_csv(tmp_file_path, header=True, index=False)
-#     print('> New data {} saved.'.format(project_name))
 
 
 def save_db(df, db, project_name):
@@ -214,10 +194,6 @@ def manage(project_name, spider_name, scraping_corner_folder, local_data_folder,
                        processed_path=processed_path,
                        project_name=project_name, 
                        db=db)
-    # # Save data
-    # save_data_csv(df=df,
-    #           tmp_file_path=tmp_path,
-    #           project_name=project_name)
 
     # Save data
     save_db(df=df,
@@ -238,11 +214,7 @@ if __name__ == "__main__":
     SOURCES = config['general']['scraping_list']
     FOLDER_LOCAL_DATA = config['general']['data_path']
     FOLDER_SCRAPING_CORNER = config['general']['scraping_corner_path']
-    FOLDER_TMP = config['general']['tmp_folder_path']
-
-    # Delete tmp data
-    clean_tmp_folder(FOLDER_TMP)
-
+    
     # Realize scrapings
     for project in SOURCES:
         manage(project_name=project,

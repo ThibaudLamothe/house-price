@@ -54,29 +54,22 @@ def get_dept(df):
     return df
 
 
-def transform_string_col_into_dict(df, col='critere'):
-    # print(df[col].head())
-    # val = df[col].iloc[0]['Surface']
-    # print(val)
-    # df[col] = df[col].apply(lambda x: json.loads(x)) #.replace('\'', '"')))
-    return df
-
-
 def concat_criteres(df):
     list_id = []
     list_k = []
     list_v = []
-    for i in df[['id_annonce', 'critere']].values:
-        # try:
+    for i in df[['id_annonce', 'critere']].values: #TODO : que se passe t il s'il n'y a pas de critere
         for k, v in i[1].items():
             list_id.append(i[0])
             list_k.append(k)
             list_v.append(v)
-        # except:
-        #     print('Il n y a pas de critere pour cette annonce')
+    print(len(list_id), len(list_k), len(list_v))
     df_crit = pd.DataFrame({'id_annonce': list_id, 'critere_name': list_k, 'critere_value': list_v})
+    print(df_crit)
     df_criteres = pd.pivot(df_crit.drop_duplicates(), index='id_annonce', columns='critere_name', values='critere_value')
+    print(df_criteres)
     df_merge = pd.merge(df, df_criteres, on='id_annonce', how='left')
+    print(df_merge)
     return df_merge
 
 
@@ -90,8 +83,6 @@ def transform_surface(df):
 def parse_date(df, drop_=True, sep_date_heure=' ', name_col_date='date_annonce'):
     date_ = df[name_col_date].apply(lambda x: x.split(sep_date_heure)[0])
     heure_ = df[name_col_date].apply(lambda x: x.split(sep_date_heure)[-1])
-    # heure_ = heure_.apply(lambda x : x.replace('h',':'))
-
     df['date_annonce'] = pd.to_datetime(date_, errors='coerce')
     df['heure_annonce'] = heure_  # pd.to_time(heure_, errors='coerce')
 
@@ -136,8 +127,7 @@ def rename_column(df, col1, col2):
 ################################################################################
 
 def clean_lbc(df):
-    df_lbc_annonce = (df.pipe(transform_string_col_into_dict, 'critere')
-                      .pipe(concat_criteres)
+    df_lbc_annonce = (df.pipe(concat_criteres)
                       .pipe(transform_prix)
                       .pipe(transform_surface)
                       .pipe(calculate_m2)
@@ -191,49 +181,46 @@ if __name__ == "__main__":
     config = f.read_json(f.CONFIG_PATH)
     db = db_connection.ImmoDB(config['database'])
 
-
     # Configuration information
     SOURCES = config['general']['scraping_list']
-    # FOLDER_TMP = config['general']['tmp_folder_path']
-    # TITLE_CLEAN_TMP = config['processing']['clean_data_filename']
-
 
     column_dict = {
         'LBC':['id', 'date_scrap', 'id_annonce', 'url_annonce', 'titre', 'prix', 'date_annonce', 'auteur', 'ville', 'code_postal', 'is_msg', 'is_num', 'categorie', 'critere', 'nb_pict', 'descr', 'processed'],
         'PV':['id', 'date_scrap', 'id_annonce', 'url_annonce', 'titre', 'prix', 'surface', 'date_annonce', 'auteur', 'ville', 'code_postal', 'nb_pieces', 'nb_pict', 'agence', 'processed']
         }
 
-
     # list for new references dataFrames
     df_list = []
 
     # Appending each datasource
     for source in SOURCES:
-        print(' >>>>>>', source)
-        # clean_csv_name = FOLDER_TMP + 'new_{}.csv'.format(source)
+        
+        # Select tratment to apply
         clean_function = clean_lbc if source == 'LBC' else clean_pv if source == 'PV' else clean_sl
+        
+        # Preapre data from database
         table_name = f.get_raw_tablename(source)
         sql_request = 'SELECT * FROM {} WHERE processed=0'.format(table_name)
-        # print(sql_request)
         df_raw = db.sql_to_df(sql_request) #, with_col=True, index='id')
-        df_raw.columns = column_dict[source]
-        df_raw = df_raw.set_index('id')
-        print(df_raw.head())
-        print(df_raw.columns)
-        # print(df_raw['critere'].head())
-        print(df_raw.iloc[0])
-        df_clean = df_raw.pipe(clean_function)
-        df_list.append(df_clean)
+        print('SOURCE', source)
+        print(df_raw)
+        if df_raw.shape[0]>0:
+            df_raw.columns = column_dict[source]
+            df_raw = pd.DataFrame(columns=column_dict[source])
+            df_raw = df_raw.set_index('id')
+            df_clean = df_raw.pipe(clean_function)
+            df_list.append(df_clean)
 
     # Make aggregation
-    df_agg = pd.concat(df_list).dropna()
-    # print(df_agg.head())
+    if len(df_list) > 0:
 
-    # # Save new data
-    # path = FOLDER_TMP + TITLE_CLEAN_TMP
-    # df_agg.to_csv(path, header=True, index=False)
-    db.execute_sql_insert(df_agg, 'tmp_cleaned')
+        # Aggregate data
+        df_agg = pd.concat(df_list).dropna()
+    
+        # Save new data into database
+        db.execute_sql_insert(df_agg, 'tmp_cleaned')
 
+    # Precise into raw database that these data has been processed
     db.update_sql('UPDATE raw_lbc SET processed=1 WHERE processed=0')
     db.update_sql('UPDATE raw_pv SET processed=1 WHERE processed=0')
     

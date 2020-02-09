@@ -98,19 +98,7 @@ def prepare_alerts(df):
     return message
 
 
-# def save_alert(message, alert_path, channel="immo_scrap"):
-
-#     # Create the alert object for slack library
-#     alert = {"channel": channel,
-#              "message": message,
-#              "emoji": ":female-firefighter:"}
-
-#     # Save it in the alerts folder
-#     path = alert_path + 'alert_{}.json'.format(f.get_now())
-#     with open(path, 'w') as outfile:
-#         json.dump(alert, outfile)
-
-def save_alert_db(message, channel="immo_scrap"):
+def save_alert_db(message, db, channel="immo_scrap"):
 
     emoji = ':female-firefighter:'
     id_user = 1
@@ -134,13 +122,9 @@ def manage_alerts(criteres, channel, db, real_split=True):
 
 
     # Loading different data sources
-    # df = f.load_csv(processed_path)
-
-
     table_name = 'processed_annonce'
     sql_request = 'SELECT * FROM {}'.format(table_name)
-    df = db.sql_to_df(sql_request, with_col=True, index='id')
-
+    df = db.sql_to_df(sql_request, with_col=True, index='id') # TODO : precise column names to avoid random switches
 
 
     # Make separation of the dataset into old and new to conduct analyses
@@ -153,11 +137,11 @@ def manage_alerts(criteres, channel, db, real_split=True):
     # Get city repartition
     repartition = get_ville_repartition(df_old, df_new)
 
-    # print(df_old.head())
-    # print(df_new.head())
-
     # Parsing request
+    # TODO : use real criteria from database
     for critere_name, critere_description in criteres.items():
+        
+        # Disply information about critere
         print(' > Critere :', critere_name)
 
         # Creating an alert dataFrame given request configuration file
@@ -166,13 +150,15 @@ def manage_alerts(criteres, channel, db, real_split=True):
         # Transform the dataFrame into a message for Slack
         alert = prepare_alerts(df_alert)
 
-        #
+        # If no new alerts
         if len(alert)==0:
             print('Pas d\'alerte à annoncer')
 
             # TODO : remove that line and add the save_alert in an else statement
             alert ='Ceci est la traduction d\'une alerte vide'
-        save_alert_db(alert, channel)
+        
+        # Save alerts into database
+        save_alert_db(alert, db, channel)
 
 
 ############################################################################
@@ -186,16 +172,12 @@ if __name__ == "__main__":
     db = db_connection.ImmoDB(config['database'])
 
     # Configuration
-    # FOLDER_PROCESSED = config['processing']['processed_folder_path']
-    # TITLE_PROCESSED = config['processing']['processed_all_data_filename']
     CRITERE_PATH = config['general']['critere_path']
-    # ALERT_PATH = config['general']['alert_data_path']
     SLACK_CHANNEL = config['alerting']['channel']
 
     # Loading content
     criteres = f.read_json(CRITERE_PATH)
 
     # Create alerts
-    # processed_path = FOLDER_PROCESSED + TITLE_PROCESSED
     manage_alerts(criteres, SLACK_CHANNEL, db=db, real_split=False)
 
