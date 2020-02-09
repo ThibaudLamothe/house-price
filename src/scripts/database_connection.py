@@ -1,10 +1,48 @@
 # Imports
+import json
 import psycopg2
 import pandas as pd
 
-import sys
-sys.path.append('../scripts')
 import functions as f
+
+
+def create_sql_request_header(dataframe, table_name):
+    """ (1/2) Used in the process of inserting data into a immoscrap database.
+        This is the creation of the header of the request
+        Part 2 is 'create_sql_request_row' function
+    """
+    s = "INSERT INTO "
+    s += table_name + "("
+    for col in dataframe.columns:
+        s+=col.lower() + ","
+    s = s[:-1] + ") VALUES ("
+    for i in range(len(dataframe.columns)):
+        s+= "%s,"
+    s = s[:-1] + ");"
+    return s
+
+def create_sql_request_row(dataframe_row):
+    """ (2/2) Used in the process of inserting data into a immoscrap database.
+        This is the creation of the content of the request
+        Part 1 is 'create_sql_request_header' functionpd.
+    """
+    y = []
+    for i in range(len(dataframe_row)):
+        val = dataframe_row.iloc[i] 
+        if type(val)==list:
+            y.append('_____'.join(dataframe_row.iloc[i]))
+        elif type(val)==dict:
+            val = json.dumps(val)
+            y.append(val)
+        elif pd.isnull(val) or val == "":
+            y.append(None)
+        else:
+            val = dataframe_row[i]
+            y.append(val)
+    return y
+
+
+
 
 class ImmoDB():
     """ This class aims to facilitate connections to ImmoScrap platform (PostGres for start)
@@ -34,15 +72,32 @@ class ImmoDB():
         self.user = 'root'
         self.pwd = 'password'
 
+    def delete_sql(self, table, col=None, value=None, printing=True):
+        if col is None:
+            sql_request = "DELETE FROM {}".format(table)
+            self.cur.execute(sql_request)
+        else:
+            sql_request = "DELETE FROM {} WHERE {} = %s".format(table, col)
+            self.cur.execute(sql_request, (value,))
+        self.conn.commit()
+        # get the number of updated rows
+        rows_deleted = self.cur.rowcount
+        print('> {} rows deleted from {}'.format(rows_deleted, table))
+
+
 
     def execute_sql(self, sql_request):
         """ Execute an sql request on the specified dev environment
         """
         self.cur.execute(sql_request)
-        # response = self.cur.fetchall()
-        return self.cur
+        rows = self.cur.fetchall()
+        return rows
 
+    def update_sql(self, sql_request):
+        self.cur.execute(sql_request)
+        self.conn.commit()
 
+     
     def reset_connection(self):
         """In case of problem in a request, there might be a connection issue.
             This function reset the connection and allows to keep the object alive.
@@ -57,18 +112,34 @@ class ImmoDB():
         self.cur = self.conn.cursor()
 
 
+
+    def execute_sql_insert(self, df, table_name):
+        """ Used to insert data into a immoscrap DataBase, given a DataFrame and a table_name.
+            NB : The table must have the columns of the DataFrame as fields.
+        """
+        sql_request = create_sql_request_header(df, table_name)
+        sql_content = [create_sql_request_row(row) for index, row in df.iterrows()]
+        self.cur.executemany(sql_request, sql_content)
+        self.conn.commit()
+        print('> {} : dataframe correctly inserted.'.format(table_name))
+
     #####################################################################################
     #                              SOPHISTICATED
     #####################################################################################
 
+    def get_ids(self, table_name):
+        sql_request = 'SELECT id_annonce FROM {};'.format(table_name)
+        ids = self.execute_sql(sql_request)
+        return [id_[0] for id_ in ids]
 
     def sql_to_df(self, sql_request, with_col=False, index=None):
         """Converts an SQL request into a dataFrame
         - with_col : If True, send an other requests to get the column names of the table and set it to the DataFrame
         - index : if specified, set the selected column as index of the DataFrame 
         """
-        self.cur.execute(sql_request)
-        rows = self.cur.fetchall()
+        rows = self.execute_sql(sql_request)
+        # rows = self.cur.fetchall()
+        
         df = pd.DataFrame(rows)
 
         if with_col:
@@ -80,6 +151,10 @@ class ImmoDB():
             table_name = req.split(' ')[1]
             print('Table name :', table_name)
             columns = self.get_column_names(table_name)
+            
+            if df.shape[0]==0:
+                return pd.DataFrame(columns=columns)
+            
             df.columns = columns
             if index is not None:
                 df = df.set_index(index)
@@ -132,45 +207,3 @@ if __name__ == "__main__":
 
 
 
-  # def create_sql_request_header(dataframe, table_name):
-#     """ (1/2) Used in the process of inserting data into a pocoto database.
-#         This is the creation of the header of the request
-#         Part 2 is 'create_sql_request_row' function
-#     """
-#     s = "INSERT INTO "
-#     s += table_name + "("
-#     for col in dataframe.columns:
-#         s+=col.lower() + ","
-#     s = s[:-1] + ") VALUES ("
-#     for i in range(len(dataframe.columns)):
-#         s+= "%s,"
-#     s = s[:-1] + ");"
-#     return s
-
-# def create_sql_request_row(dataframe_row):
-#     """ (2/2) Used in the process of inserting data into a pocoto database.
-#         This is the creation of the content of the request
-#         Part 1 is 'create_sql_request_header' function
-#     """
-#     y = []
-#     for i in range(len(dataframe_row)):
-#         if pd.isnull(dataframe_row[i]) or dataframe_row[i] == "":
-#             y.append(None)
-#         else:
-#             val = dataframe_row[i]
-#             y.append(val)
-#     return y
-
-# def execute_sql_insert(pocoto, dataframe,table_name):
-#     """ Used to insert data into a pocoto DataBase, given a DataFrame and a table_name.
-#         NB : The table must have the columns of the DataFrame as fields.
-#     """
-#     cur = pocoto.cur
-#     sql_request = create_sql_request_header(dataframe, table_name)
-#     print(sql_request)
-#     for index,rows in dataframe.iterrows():
-#         my_sql_row = create_sql_request_row(rows)
-#         print(my_sql_row)
-#         cur.execute(sql_request,my_sql_row)
-#     pocoto.conn.commit()
-#     print('> {} : dataframe correctly inserted.'.format(table_name))

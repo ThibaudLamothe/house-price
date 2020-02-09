@@ -2,6 +2,7 @@ import os
 import json
 import datetime
 import pandas as pd
+import numpy as np
 
 
 CONFIG_PATH = '../config/config.json'
@@ -63,8 +64,11 @@ def get_url(df, line=0, all=False, col=None):
             print(url)
 
 
-def get_now():
-    return str(datetime.datetime.now())[:19].replace(' ', '_').replace(':', '-')
+def get_now(original=False):
+    now = str(datetime.datetime.now())[:19]
+    if original:
+        return now
+    return now.replace(' ', '_').replace(':', '-')
 
 
 def load_csv(path, name='DF'):
@@ -82,3 +86,8 @@ def fake_old_new(df_new):
     df_old = df_new.iloc[:half]
     df_new = df_new.iloc[half:]
     return df_old, df_new
+
+
+def get_raw_tablename(project_name):
+      table_name = 'raw_{}'.format(project_name.lower())
+      return table_name

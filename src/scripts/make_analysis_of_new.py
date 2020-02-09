@@ -1,9 +1,13 @@
 # Python libraries
 import json
 import numpy as np
+import pandas as pd
 
 # Personal functions
 import functions as f
+import database_connection as db_connection
+
+pd.set_option('chained_assignment',None)
 
 ############################################################################
 ############################################################################
@@ -39,6 +43,11 @@ def get_ville_repartition(df_old, df_new):
 
 def get_important_new_lines(df_old, df_new, repartition):
     # Calculating information
+
+    for col in ['prix', 'surface', 'prix_m2']:
+        df_old[col] = pd.to_numeric(df_old[col], errors='coerce')
+        df_new[col] = pd.to_numeric(df_new[col], errors='coerce')
+    
     old_mean = df_old.groupby('ville').mean()[['prix', 'surface', 'prix_m2']].applymap(lambda x: np.round(x, 2))
     # old_d1 = df_old.groupby('ville').quantile(q=0.1)[['prix', 'surface', 'prix_m2']].applymap(lambda x: np.round(x, 2))
     old_d1 = df_old.groupby('ville').median()[['prix', 'surface', 'prix_m2']].applymap(lambda x: np.round(x, 2))
@@ -89,29 +98,53 @@ def prepare_alerts(df):
     return message
 
 
-def save_alert(message, alert_path, channel="immo_scrap"):
+# def save_alert(message, alert_path, channel="immo_scrap"):
 
-    # Create the alert object for slack library
-    alert = {"channel": channel,
-             "message": message,
-             "emoji": ":female-firefighter:"}
+#     # Create the alert object for slack library
+#     alert = {"channel": channel,
+#              "message": message,
+#              "emoji": ":female-firefighter:"}
 
-    # Save it in the alerts folder
-    path = alert_path + 'alert_{}.json'.format(f.get_now())
-    with open(path, 'w') as outfile:
-        json.dump(alert, outfile)
+#     # Save it in the alerts folder
+#     path = alert_path + 'alert_{}.json'.format(f.get_now())
+#     with open(path, 'w') as outfile:
+#         json.dump(alert, outfile)
 
+def save_alert_db(message, channel="immo_scrap"):
+
+    emoji = ':female-firefighter:'
+    id_user = 1
+    now = f.get_now(original=True)
+
+    content = {
+        'id_user':[id_user],
+        'emoji':[emoji],
+        'channel_name':[channel],
+        'date_alerte':[now],
+        'alerte':message
+        }
+    df = pd.DataFrame(content)
+    db.execute_sql_insert(df, 'alerts')
 
 ############################################################################
 ############################################################################
 
-def manage_alerts(processed_path, criteres, alert_path, channel, real=True):
+# def manage_alerts(processed_path, criteres, alert_path, channel, db, real_split=True):
+def manage_alerts(criteres, channel, db, real_split=True):
+
 
     # Loading different data sources
-    df = f.load_csv(processed_path)
+    # df = f.load_csv(processed_path)
+
+
+    table_name = 'processed_annonce'
+    sql_request = 'SELECT * FROM {}'.format(table_name)
+    df = db.sql_to_df(sql_request, with_col=True, index='id')
+
+
 
     # Make separation of the dataset into old and new to conduct analyses
-    if real:
+    if real_split:
         df_new = df[df['new'] == 1]
         df_old = df[df['new'] == 0]
     else:
@@ -119,6 +152,9 @@ def manage_alerts(processed_path, criteres, alert_path, channel, real=True):
 
     # Get city repartition
     repartition = get_ville_repartition(df_old, df_new)
+
+    # print(df_old.head())
+    # print(df_new.head())
 
     # Parsing request
     for critere_name, critere_description in criteres.items():
@@ -136,7 +172,7 @@ def manage_alerts(processed_path, criteres, alert_path, channel, real=True):
 
             # TODO : remove that line and add the save_alert in an else statement
             alert ='Ceci est la traduction d\'une alerte vide'
-        save_alert(alert, alert_path, channel)
+        save_alert_db(alert, channel)
 
 
 ############################################################################
@@ -147,18 +183,19 @@ if __name__ == "__main__":
     # Load config file
     config = f.read_json(f.CONFIG_PATH)
     now = f.get_now()
+    db = db_connection.ImmoDB(config['database'])
 
     # Configuration
-    FOLDER_PROCESSED = config['processing']['processed_folder_path']
-    TITLE_PROCESSED = config['processing']['processed_all_data_filename']
+    # FOLDER_PROCESSED = config['processing']['processed_folder_path']
+    # TITLE_PROCESSED = config['processing']['processed_all_data_filename']
     CRITERE_PATH = config['general']['critere_path']
-    ALERT_PATH = config['general']['alert_data_path']
+    # ALERT_PATH = config['general']['alert_data_path']
     SLACK_CHANNEL = config['alerting']['channel']
 
     # Loading content
     criteres = f.read_json(CRITERE_PATH)
 
     # Create alerts
-    processed_path = FOLDER_PROCESSED + TITLE_PROCESSED
-    manage_alerts(processed_path, criteres, ALERT_PATH, SLACK_CHANNEL, real=True)
+    # processed_path = FOLDER_PROCESSED + TITLE_PROCESSED
+    manage_alerts(criteres, SLACK_CHANNEL, db=db, real_split=False)
 

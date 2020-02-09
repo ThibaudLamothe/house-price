@@ -4,6 +4,8 @@ from shutil import copyfile
 
 # Personal functions
 import functions as f
+import database_connection as db_connection
+
 
 ################################################################################
 ################################################################################
@@ -15,13 +17,6 @@ def filter_ids(df, col_name, list_id):
     - list_id:
     """
     return df.loc[df[col_name].isin(list_id)]
-
-
-def get_ids(spider_name):
-    """Used to get older ids
-    - spider_name:
-    """
-    return [1, 2, 3]
 
 
 ################################################################################
@@ -97,7 +92,7 @@ def get_immo_data(path_source, path_dest_history, path_dest_pipeline, project_na
     print('> Files from {} saved.'.format(project_name))
 
 
-def get_only_new(scrapped_path, processed_path, title):
+def keep_only_new(scrapped_path, processed_path, project_name, db):
     """Read the data into the folder and prepare for saving
     - scrapped_path:
     - porcessed_path:
@@ -109,43 +104,72 @@ def get_only_new(scrapped_path, processed_path, title):
     df = f.read_jl_file(scrapped_path)
     new_ids = df['id_'].values
 
-    # Check if there are already processed data
-    is_processed = os.path.isfile(processed_path)
+    # Getting old ids
+    table_name = 'raw_{}'.format(project_name.lower())
+    old_ids = db.get_ids(table_name=table_name)
+    old_ids = set(old_ids)
 
-    # If there are
-    if is_processed:
-        print('> is_processed')
+    # # Check if there are already processed data
+    # is_processed = os.path.isfile(processed_path)
 
-        # Get old ids
-        old_ids = get_ids(title)  # functions to write
+    # # If there are
+    # if is_processed:
+    #     print('> is_processed')
 
-        # Get new ids
-        new_ids = [id_ for id_ in new_ids if id_ not in old_ids]
+    # Get new ids
+    new_ids = [id_ for id_ in new_ids if id_ not in old_ids]
 
-        # Keep only new IDs
-        df = filter_ids(df, 'id_', new_ids)
+    # Keep only new IDs
+    df = filter_ids(df, 'id_', new_ids)
 
     return df
 
 
-def save_data(df, tmp_file_path, project_name):
-    """ Saving data into local folder
-    - df:
-    - tmp_folder:
-    - saving_name:
-    - title:
+# def save_data_csv(df, tmp_file_path, project_name):
+#     """ Saving data into local folder
+#     - df:
+#     - tmp_folder:
+#     - saving_name:
+#     - title:
+#     """
+
+#     print('> Selection ok.')
+#     df.to_csv(tmp_file_path, header=True, index=False)
+#     print('> New data {} saved.'.format(project_name))
+
+
+def save_db(df, db, project_name):
+    """ Dispatch to the correct raw saving table
     """
 
-    print('> Selection ok.')
-    df.to_csv(tmp_file_path, header=True, index=False)
-    print('> New data {} saved.'.format(project_name))
+    # Depending on project some structuration has to be done so that scrapped data fit database
+    renaming_dict = {
+        'LBC':{'id_':'id_annonce', 'url':'url_annonce', 'description':'descr', 'date_absolue':'date_annonce'},
+        'PV':{'id_':'id_annonce', 'url':'url_annonce', 'date_absolue':'date_annonce'}
+    }
+
+    # Make the modification on the dataset
+    now = f.get_now(original=True)
+    df = df.rename(columns=renaming_dict[project_name])
+    df['date_scrap'] = now
+    df['processed'] = 0
+
+    # Execute the insertion
+    nb_lines = df.shape[0]
+    if nb_lines > 0:
+        table_name = f.get_raw_tablename(project_name) #raw_{}'.format(project_name.lower())
+        db.execute_sql_insert(df, table_name)
+    
+    # Display results
+    print('> {} lines - new data {} saved.'.format(nb_lines, project_name))
+
 
 
 ################################################################################
 ################################################################################
 
 
-def manage(project_name, spider_name, scraping_corner_folder, local_data_folder, scrapping=True, now=f.get_now()):
+def manage(project_name, spider_name, scraping_corner_folder, local_data_folder, db, scrapping=True, now=f.get_now()):
     """ Make data available from scrapping to raw data fodler
     - project_name:
     - spider_name:
@@ -179,20 +203,26 @@ def manage(project_name, spider_name, scraping_corner_folder, local_data_folder,
                    scrapy_data_path=scraping_data_folder,
                    file_name=scrapped_filename)
 
-    # Get data from scrapping_corner to local folder raw_data
-    get_immo_data(path_source=source_path,
-                  path_dest_history=dest_history_path,
-                  path_dest_pipeline=dest_pipeline_path,
-                  project_name=project_name)
+        # Get data from scrapping_corner to local folder raw_data
+        get_immo_data(path_source=source_path,
+                    path_dest_history=dest_history_path,
+                    path_dest_pipeline=dest_pipeline_path,
+                    project_name=project_name)
 
     # Process data fr
-    df = get_only_new(scrapped_path=dest_pipeline_path,
-                      processed_path=processed_path,
-                      title=project_name)
+    df = keep_only_new(scrapped_path=dest_pipeline_path,
+                       processed_path=processed_path,
+                       project_name=project_name, 
+                       db=db)
+    # # Save data
+    # save_data_csv(df=df,
+    #           tmp_file_path=tmp_path,
+    #           project_name=project_name)
+
     # Save data
-    save_data(df=df,
-              tmp_file_path=tmp_path,
-              project_name=project_name)
+    save_db(df=df,
+            db=db,
+            project_name=project_name)
 
 
 ################################################################################
@@ -202,6 +232,7 @@ if __name__ == "__main__":
 
     # Load config file
     config = f.read_json(f.CONFIG_PATH)
+    db = db_connection.ImmoDB(config['database'])
 
     # Extract necessary information from config
     SOURCES = config['general']['scraping_list']
@@ -217,5 +248,7 @@ if __name__ == "__main__":
         manage(project_name=project,
                spider_name='spider{}'.format(project),
                scraping_corner_folder=FOLDER_SCRAPING_CORNER,
-               local_data_folder=FOLDER_LOCAL_DATA
+               local_data_folder=FOLDER_LOCAL_DATA,
+               db=db,
+               scrapping=True
                )
