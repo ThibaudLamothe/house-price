@@ -32,6 +32,15 @@ def viager(df):
 
 
 def processing(df):
+    """[summary]
+    
+    Arguments:
+        df {[type]} -- [description]
+    
+    Returns:
+        [type] -- [description]
+    """
+    
     # return (df.pipe(paris_decompo)
     #         .pipe(viager)
     #         )

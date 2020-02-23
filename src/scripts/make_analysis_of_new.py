@@ -85,8 +85,8 @@ def prepare_alerts(df):
     for i in df.sort_values(by='ville').iterrows():
         line = i[1]
         ville = line['ville']
-        # url = line['url']
-        url = default_url
+        url = line['url_annonce']
+        # url = default_url
         prix = line['prix']
         surface = line['surface']
         moy_ville = line['moy_ville']

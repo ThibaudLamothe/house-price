@@ -92,7 +92,7 @@ def get_immo_data(path_source, path_dest_history, path_dest_pipeline, project_na
     print('> Files from {} saved.'.format(project_name))
 
 
-def keep_only_new(scrapped_path, processed_path, project_name, db):
+def keep_only_new(scrapped_path, project_name, db):
     """Read the data into the folder and prepare for saving
     - scrapped_path:
     - porcessed_path:
@@ -118,7 +118,7 @@ def keep_only_new(scrapped_path, processed_path, project_name, db):
     return df
 
 
-def save_db(df, db, project_name):
+def save_db(df, db, scrapped_path, project_name):
     """ Dispatch to the correct raw saving table
     """
 
@@ -139,6 +139,9 @@ def save_db(df, db, project_name):
     if nb_lines > 0:
         table_name = f.get_raw_tablename(project_name) #raw_{}'.format(project_name.lower())
         db.execute_sql_insert(df, table_name)
+
+        # Delete source file
+        os.remove(path_source)
     
     # Display results
     print('> {} lines - new data {} saved.'.format(nb_lines, project_name))
@@ -172,7 +175,6 @@ def manage(project_name, spider_name, scraping_corner_folder, local_data_folder,
     processed_path = local_data_folder + 'processed/processed_data.csv'
     dest_history_path = local_data_folder + 'raw/history/raw_{}_{}.jl'.format(project_name, now)
     dest_pipeline_path = local_data_folder + 'raw/raw_{}.jl'.format(project_name)
-    tmp_path = tmp_folder + '{}'.format(saving_filename)
     source_path = scraping_data_folder + '{}'.format(scrapped_filename)
 
     # Run spider and save data into scraping_corner scrapped_data folder
@@ -184,21 +186,21 @@ def manage(project_name, spider_name, scraping_corner_folder, local_data_folder,
                    file_name=scrapped_filename)
 
         # Get data from scrapping_corner to local folder raw_data
-        get_immo_data(path_source=source_path,
-                    path_dest_history=dest_history_path,
-                    path_dest_pipeline=dest_pipeline_path,
-                    project_name=project_name)
+        # get_immo_data(path_source=source_path,
+        #             path_dest_history=dest_history_path,
+        #             path_dest_pipeline=dest_pipeline_path,
+        #             project_name=project_name)
 
     # Process data fr
-    df = keep_only_new(scrapped_path=dest_pipeline_path,
-                       processed_path=processed_path,
+    df = keep_only_new(scrapped_path=source_path,
                        project_name=project_name, 
                        db=db)
 
     # Save data
     save_db(df=df,
             db=db,
-            project_name=project_name)
+            project_name=project_name,
+            scrapped_path=source_path)
 
 
 ################################################################################
